@@ -261,8 +261,8 @@ Apply this transformation consistently for every write in this step.
   - The squad memory
   - The **transformed** path to save output (e.g., `squads/{name}/output/2026-03-20-140736/slides/v1/draft.md`)
 - Wait for the subagent to complete
-- Read the output file to verify it was created — use the **stored transformed path**, not the raw step path
 - Inform user: `✓ {Agent Name} completed`
+- Proceed to Post-Step Output Validation (below) before advancing.
 
 #### If `execution: inline`
 - Switch to the agent's persona (read from party CSV)
@@ -270,6 +270,7 @@ Apply this transformation consistently for every write in this step.
 - Follow the step instructions
 - Present output directly in the conversation
 - Save output to the specified output file — apply the Output Path Transformation (Steps 1 and 2) to the path before writing. Do not write to the raw path from the step file.
+- Proceed to Post-Step Output Validation (below) before advancing.
 
 #### If `type: checkpoint`
 - Present the checkpoint message to the user
@@ -287,6 +288,38 @@ Apply this transformation consistently for every write in this step.
   **Date:** {today's date in YYYY-MM-DD format}
   ```
   This file is the `inputFile` for the researcher step that follows.
+
+### Post-Step Output Validation
+
+After a step produces output (subagent or inline) and BEFORE Veto Condition Enforcement, the runner MUST validate that the declared output files exist and are non-empty. This is a binary, non-negotiable gate — the runner does NOT proceed on memory or assumption, only on bash output.
+
+**If the step declares an `outputFile`** (single or multiple), run via Bash tool for EACH output file:
+
+```bash
+test -s "{transformed outputFile path}" && echo "VALIDATION:PASS" || echo "VALIDATION:FAIL"
+```
+
+Use the **stored transformed path** (after Output Path Transformation Steps 1 and 2), not the raw path from the step file.
+
+**Rules:**
+- If ALL output files return `VALIDATION:PASS` → proceed to Veto Condition Enforcement.
+- If ANY output file returns `VALIDATION:FAIL`:
+  1. **Retry once**: re-execute the entire step with the same input and context.
+  2. After re-execution, run the validation again for all output files.
+  3. If second attempt returns `VALIDATION:PASS` for all files → proceed normally.
+  4. If second attempt still has ANY `VALIDATION:FAIL` → present to user:
+     ```
+     ⚠️ {Agent Name}'s output was not generated: {path}
+
+     1. Retry step
+     2. Skip step and continue
+     3. Abort pipeline
+     ```
+     Wait for user choice before proceeding.
+- If the step does not declare an `outputFile` (e.g., steps that only produce inline console output) → skip output validation.
+- Checkpoint steps (`type: checkpoint`) are exempt — their output is the user's response, not a file.
+
+**IMPORTANT**: Do NOT rely on reading the file with the Read tool to "verify" output. The Read tool returns content that can be misinterpreted. Use ONLY the bash `test -s` command — its output is binary and cannot be hallucinated.
 
 ### Veto Condition Enforcement
 
