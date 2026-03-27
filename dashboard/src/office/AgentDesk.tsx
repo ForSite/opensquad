@@ -3,7 +3,7 @@ import { extend } from "@pixi/react";
 import { Container, Graphics, Text, Sprite } from "pixi.js";
 import type { Agent } from "@/types/state";
 import type { Graphics as PixiGraphics, TextStyleOptions, Texture } from "pixi.js";
-import { COLORS, CELL_W, CELL_H, TILE, CHARACTER_VARIANTS } from "./palette";
+import { COLORS, CELL_W, CELL_H, TILE } from "./palette";
 import { drawDeskArea, drawWorkstationBack, drawWorkstationFront, drawScreenGlow, drawDeskAccessories } from "./drawDesk";
 import { getCharacterTextures } from "./textures";
 
@@ -38,8 +38,7 @@ export function AgentDesk({ agent, agentIndex }: AgentDeskProps) {
     return () => clearInterval(interval);
   }, [agent.status]);
 
-  const variant = CHARACTER_VARIANTS[agentIndex % CHARACTER_VARIANTS.length];
-  const textures = getCharacterTextures(agentIndex, variant);
+  const textures = getCharacterTextures(agentIndex);
 
   let currentTexture: Texture;
   switch (agent.status) {
