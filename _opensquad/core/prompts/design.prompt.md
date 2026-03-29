@@ -12,7 +12,7 @@ Strategic systems thinker who sees organizations as interconnected workflows. Ha
 
 Read these files before starting:
 
-- `squads/{code}/_build/discovery.yaml` — Discovery phase output (purpose, audience, domains, performance mode, formats, references)
+- `squads/{code}/_build/discovery.yaml` — Discovery phase output (purpose, audience, domains, formats, references)
 - `_opensquad/_memory/company.md` — Company context for personalization
 - `_opensquad/_memory/preferences.md` — User preferences (especially Output Language)
 - `_opensquad/core/best-practices/_catalog.yaml` — Best-practices catalog
@@ -132,7 +132,7 @@ Before designing the squad, check if any skills (installed or from catalog) woul
    - Content squads → check for: design, social-media skills
    - Communication squads → check for: messaging, notification skills
 3. Only suggest skills when native skills (web_search, web_fetch) are clearly insufficient for the squad's needs. Do NOT suggest skills if native skills cover the use case.
-4. If relevant skills found, present to user as a numbered list (user can reply with multiple numbers separated by spaces). If only 1 skill is relevant, add "No thanks, skip skills" as a second option.
+4. If relevant skills found, present to user as a numbered list. If only 1 skill is relevant, add "No thanks, skip skills" as a second option.
    "These skill integrations could enhance your squad:
    - {name}: {first line of description}
    Want to set up any of these? (You can always add skills later)"
@@ -147,6 +147,17 @@ Before designing the squad, check if any skills (installed or from catalog) woul
 ## Phase E: Agent Design
 
 Based on discovery answers + company context + research findings + extracted artifacts + best-practices:
+
+### Design Philosophy
+
+Build agile, objective squads. Each agent should have the minimum tasks necessary to fulfill its role. Avoid redundant passes, cascading reviews, or separate optimization tasks. A single well-crafted task that combines creation and basic optimization is better than three tasks that split the work artificially.
+
+Guidelines:
+- 1-2 tasks per agent maximum
+- One creator agent (generic writer), not per-platform specialists
+- Combined optimization embedded in the creation task
+- Single-pass review (no separate scoring + feedback tasks)
+- Research agents must be direct and focused — no exhaustive surveys
 
 Design the squad with appropriate agents:
 - Follow the deep `.agent.md` format with full sections: Persona (Role, Identity, Communication Style), Principles, Operational Framework, Voice Guidance, Output Examples, Anti-Patterns, Quality Criteria, Integration
@@ -270,29 +281,22 @@ ERRADO: 5 noticias diferentes = NAO sao angulos, sao pautas distintas
 **a. Researcher agent** (handles news discovery and ranking only — never angles):
 - Design from scratch, using knowledge from best-practices `researching.md`
 - The researcher finds and ranks source material only. Angle generation is NEVER the researcher's job — it belongs to the creator agent, after the user selects a story.
-- Tasks based on performance_mode:
-  - Alta Performance: `find-news.md` → `rank-stories.md` (2 tasks)
-  - Economico: `find-and-rank-news.md` (1 task)
+- Tasks: `find-and-rank-news.md` (single focused task)
 - After research, add news selection checkpoint (user picks ONE story)
 
 **b. Platform-specific Creator agents:**
 - **For news-based squads**: the creator is responsible for angle generation. Prepend `generate-angles.md` as the creator's FIRST task. This task runs in a dedicated pipeline step AFTER the news selection checkpoint — it generates 5 distinct angles from the ONE selected story. An angle selection checkpoint follows immediately. The content creation tasks run in a SEPARATE pipeline step AFTER angle selection.
-  - Alta Performance (news-based): `generate-angles.md` [step A, after news selection] → Angle Selection checkpoint → `create-{format}.md` → `optimize-{format}.md` [step B, after angle selection]
-  - Economico (news-based): `generate-angles.md` [step A, after news selection] → Angle Selection checkpoint → `create-{format}.md` [step B, optimization embedded]
+  - Pipeline: `generate-angles.md` [step A, after news selection] → Angle Selection checkpoint → `create-{format}.md` [step B, optimization embedded in creation]
 - Design from scratch, using knowledge from best-practices `copywriting.md` and the relevant platform best-practice file (e.g., `instagram-feed.md`)
 - Use the format system: assign `format: {format-id}` to each creator step (e.g., `format: instagram-feed`). The Pipeline Runner injects the format file from `_opensquad/core/best-practices/` automatically — do NOT manually embed platform knowledge in task files or agent definitions.
 - Create ONE dedicated creator agent per target format (e.g., instagram-feed-creator, twitter-thread-creator)
 - Each creator gets an alliterative name matching the platform (e.g., "Tiago Twitter", "Luna LinkedIn", "Iago Instagram")
-- Tasks based on performance_mode:
-  - Alta Performance: `create-{format-1}.md` → `create-{format-2}.md` → `optimize-{format}.md` (3 tasks)
-  - Economico: `create-{main-format}.md` with optimization embedded (1 task)
+- Tasks: `create-{format}.md` with optimization embedded (single focused task per format)
 - Platform creators CAN run in parallel (`execution: subagent`) when multiple formats are targeted
 
 **c. Reviewer agent:**
 - Design from scratch, using knowledge from best-practices `review.md`
-- Tasks based on performance_mode:
-  - Alta Performance: `score-content.md` → `generate-feedback.md` (2 tasks)
-  - Economico: `review.md` — combined scoring + feedback (1 task)
+- Tasks: `review.md` — combined scoring + feedback (single pass)
 - For multi-platform squads: reviewer evaluates ALL platform outputs
 - Apply both global criteria (brand, accuracy, tone) and platform-specific criteria
 
@@ -306,11 +310,6 @@ ERRADO: 5 noticias diferentes = NAO sao angulos, sao pautas distintas
 On reject: loop back to creation step (re-execute full creator, not individual tasks).
 
 Creators for different platforms run as parallel subagents.
-
-#### Performance Mode Effects on Task Decomposition
-
-- **Alta Performance**: 3-5 tasks per agent, platform-specific creators, dedicated optimization tasks, full review with separate scoring and feedback. Higher token consumption due to multiple optimization passes, dedicated review tasks, and A/B variant generation.
-- **Economico**: 1-2 tasks per agent, single creator (or generic writer), combined optimization in create task, lightweight single-pass review. Reduced token consumption with single-pass creation and lightweight review.
 
 #### Non-Content Squads
 
@@ -336,7 +335,6 @@ I'll create a squad with N agents:
 Pipeline (fixed source): [Research] → checkpoint Select Angle → [Creator] → checkpoint Approve Content → [Execution] → [Review] → checkpoint Approve
 Pipeline (news-based): [Research] → checkpoint Select News → [Creator: generate angles] → checkpoint Select Angle → [Creator: create content] → checkpoint Approve Content → [Execution] → [Review] → checkpoint Approve
 Formats: [list of selected formats, e.g., instagram-feed, twitter-thread]
-Mode: [Alta Performance / Economico]
 
 Reference materials: [list of data files]
 
@@ -375,7 +373,6 @@ squad:
   code: "{code}"
   name: "{Squad Name}"
   description: "{one-line description}"
-  performance_mode: "alta_performance" | "economico"
 
 agents:
   - id: "{agent-id}"
